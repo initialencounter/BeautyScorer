@@ -1,0 +1,159 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="initial-scale=1, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0, width=device-width" />
+
+</head>
+
+<body style="overflow: hidden;">
+    <title></title>
+    <h1 id="title">加载中...</h1>
+    <img id="img" style="width:256px;height:256px;border: 2px solid black;">
+    <div id='score' style="position: absolute;width: 200px;height: 70px;background-color: rgb(29, 238, 245);top: 400px;left: 8px;font-size:30px;line-height:80px;">评分：</div>
+    <div id='sta' style="position: absolute;width: 100px;height: 80px;background-color: yellow;right: 20px;top: 400px;border: 2px solid green;font-size:10px;line-height:80px;">状态</div>
+    <div id='box1' style="position: absolute;width: 100px;height: 80px;background-color: yellow;right: 20px;top: 500px;border: 2px solid green;font-size:30px;line-height:80px;">NEXT 提交</div>
+    <div id='box2' style="position: absolute;width: 100px;height: 100px;background-color: #00FFFF;right: 20px;bottom: 50px;border: 2px solid green;font-size:30px;line-height:80px;"></div>
+    <style>
+        button {
+            width: 60px;
+            height: 60px;
+        }
+    </style>
+    <!--<div id="calculator" style="width:300px;heigth:300px;position:absolute;left:10px;bottom:80px">-->
+    <!--    <input type="text" id="inputField" readonly>-->
+    <!--    <div class="row">-->
+    <!--        <button class="number" onclick="addToInput('7')">7</button>-->
+    <!--        <button class="number" onclick="addToInput('8')">8</button>-->
+    <!--        <button class="number" onclick="addToInput('9')">9</button>-->
+    <!--    </div>-->
+    <!--    <div class="row">-->
+    <!--        <button class="number" onclick="addToInput('4')">4</button>-->
+    <!--        <button class="number" onclick="addToInput('5')">5</button>-->
+    <!--        <button class="number" onclick="addToInput('6')">6</button>-->
+    <!--    </div>-->
+    <!--    <div class="row">-->
+    <!--        <button class="number" onclick="addToInput('1')">1</button>-->
+    <!--        <button class="number" onclick="addToInput('2')">2</button>-->
+    <!--        <button class="number" onclick="addToInput('3')">3</button>-->
+    <!--    </div>-->
+    <!--    <div class="row">-->
+    <!--        <button class="number" onclick="addToInput('0')">0</button>-->
+    <!--        <button id="backspace" onclick="addToInput('.')">.</button>-->
+    <!--                    <button id="clear" onclick="clearInput()">C</button>-->
+    <!--    </div>-->
+    <!--</div>-->
+    <script src="autojs://sdk/v1.js"></script>
+    <script>
+        let title = document.getElementById('title');
+        let img = document.getElementById('img');
+        let score = document.getElementById('score');
+        let sta = document.getElementById('sta');
+        let bt1 = document.getElementById('box1');
+        let bt2 = document.getElementById('box2');
+        let inputField = document.getElementById("inputField");
+        let pretty_value = '3.00'
+        let currentDir;
+        // function addToInput(number) {
+        //     inputField.value += number;
+        // }
+        // function clearInput() {
+        //     inputField.value = "";
+        // }
+        
+        
+        changeDir('../face');
+
+
+        // 在返回键/返回手势时，返回上一级目录
+        $autojs.handle('go-back', () => {
+            const i = currentDir.lastIndexOf('..');
+            if (i <= 0) {
+                $autojs.invoke('finish');
+                return;
+            }
+            changeDir(currentDir.substring(0, i));
+            return currentDir;
+        });
+
+        function changeDir(dir) {
+            currentDir = dir;
+            title.innerText = '颜值评分';
+            $autojs.invoke('listFiles', {
+                path: dir
+            }).then((files) => {
+                setFiles(dir, files);
+            }).catch(showError);
+        }
+
+        function setFiles(dir, files) {
+            var id = files[0].count
+            img.src = files[id].path
+            bt1.onclick = function() {
+                var fileName = files[id].path
+                if(!parseInt(pretty_value)){
+                    bt1.innerHTML='输入错误'
+                    return
+                }
+                if (parseInt(pretty_value) > 5) {
+                    pretty_value = String(5.00)
+                } else {
+                    if(pretty_value.length>4){
+                        pretty_value = String(pretty_value).slice(0, 4)
+                    }else{
+                        if(pretty_value.length<4){
+                            if(pretty_value.indexOf('.')==-1){
+                                pretty_value+='.'
+                            }
+                            pretty_value+='0'
+                        }
+                        if(pretty_value.length<4){
+                            pretty_value+='0'
+                        }
+                        if(pretty_value.length<4){
+                            pretty_value+='0'
+                        }
+                    }
+                }
+                
+                $autojs.invoke('post', {
+                    pretty_value: fileName.slice(8,fileName.length)+':'+pretty_value
+                }).then((sta) => {
+                    sta.innerHTML = '成功'
+                }).catch(showError);
+                
+                id++
+                bt1.innerHTML = 'id：'+String(id)
+    
+                img.src = files[id].path
+                sta.innerHTML = 'name：'+(files[id].path.slice(8,-4))
+                switch (bt1.style.backgroundColor) {
+                    case 'white':
+                        bt1.style.backgroundColor = 'yellow'
+                        break
+                    default:
+                        bt1.style.backgroundColor = 'white'
+                        break
+                }
+            }
+        }
+
+        function showError(err) {
+            console.log(err)
+            sta.innerText = err.toString();
+        }
+
+        bt2.ontouchmove = function(e) {
+            move_value = ((e.touches[0].screenX) / 300) * 5
+            if (move_value > 5) {
+                pretty_value = '5.00'
+            } else {
+                pretty_value = String(move_value).slice(0, 4)
+            }
+            bt2.style.left = e.touches[0].screenX - 50;
+            score.innerHTML = '评分:' + String(((e.touches[0].screenX) / 300) * 100).slice(0,2)
+        };
+</script>
+</body>
+
+</html>
